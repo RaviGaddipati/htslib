@@ -65,9 +65,11 @@ pkgconfigdir= $(libdir)/pkgconfig
 
 MKDIR_P = mkdir -p
 INSTALL = install -p
-INSTALL_PROGRAM = $(INSTALL)
 INSTALL_DATA    = $(INSTALL) -m 644
 INSTALL_DIR     = $(MKDIR_P) -m 755
+INSTALL_LIB     = $(INSTALL_DATA)
+INSTALL_MAN     = $(INSTALL_DATA)
+INSTALL_PROGRAM = $(INSTALL)
 
 # Set by config.mk if plugins are enabled
 plugindir =
@@ -92,8 +94,8 @@ HTSPREFIX =
 include htslib_vars.mk
 
 
-PACKAGE_VERSION  = 1.3.1
-LIBHTS_SOVERSION = 1
+PACKAGE_VERSION  = 1.3.2
+LIBHTS_SOVERSION = 2
 
 
 # $(NUMERIC_VERSION) is for items that must have a numeric X.Y.Z string
@@ -233,6 +235,11 @@ libhts.a: $(LIBHTS_OBJS)
 	$(AR) -rc $@ $(LIBHTS_OBJS)
 	-$(RANLIB) $@
 
+print-config:
+	@echo LDFLAGS = $(LDFLAGS)
+	@echo LIBHTS_OBJS = $(LIBHTS_OBJS)
+	@echo LIBS = $(LIBS)
+	@echo PLATFORM = $(PLATFORM)
 
 # The target here is libhts.so, as that is the built file that other rules
 # depend upon and that is used when -lhts appears in other program's recipes.
@@ -270,7 +277,6 @@ errmod.o errmod.pico: errmod.c config.h $(htslib_hts_h) $(htslib_ksort_h)
 kstring.o kstring.pico: kstring.c config.h $(htslib_kstring_h)
 knetfile.o knetfile.pico: knetfile.c config.h $(htslib_knetfile_h)
 hfile.o hfile.pico: hfile.c config.h $(htslib_hfile_h) $(hfile_internal_h) $(hts_internal_h) $(htslib_khash_h)
-hfile_irods.o hfile_irods.pico: hfile_irods.c config.h $(hfile_internal_h) $(htslib_hts_h) $(htslib_kstring_h)
 hfile_libcurl.o hfile_libcurl.pico: hfile_libcurl.c config.h $(hts_internal_h) $(hfile_internal_h) $(htslib_hts_h) $(htslib_kstring_h)
 hfile_net.o hfile_net.pico: hfile_net.c config.h $(hfile_internal_h) $(htslib_knetfile_h)
 hts.o hts.pico: hts.c config.h $(htslib_hts_h) $(htslib_bgzf_h) $(cram_h) $(htslib_hfile_h) version.h $(hts_internal_h) $(htslib_khash_h) $(htslib_kseq_h) $(htslib_ksort_h)
@@ -324,7 +330,7 @@ tabix.o: tabix.c config.h $(htslib_tbx_h) $(htslib_sam_h) $(htslib_vcf_h) $(htsl
 
 # For tests that might use it, set $REF_PATH explicitly to use only reference
 # areas within the test suite (or set it to ':' to use no reference areas).
-check test: htsfile $(BUILT_TEST_PROGRAMS)
+check test: bgzip htsfile $(BUILT_TEST_PROGRAMS)
 	test/fieldarith test/fieldarith.sam
 	test/hfile
 	test/sam test/ce.fa test/faidx.fa
@@ -366,8 +372,8 @@ install: libhts.a $(BUILT_PROGRAMS) $(BUILT_PLUGINS) installdirs install-$(SHLIB
 	if test -n "$(BUILT_PLUGINS)"; then $(INSTALL_PROGRAM) $(BUILT_PLUGINS) $(DESTDIR)$(plugindir); fi
 	$(INSTALL_DATA) htslib/*.h $(DESTDIR)$(includedir)/htslib
 	$(INSTALL_DATA) libhts.a $(DESTDIR)$(libdir)/libhts.a
-	$(INSTALL_DATA) htsfile.1 tabix.1 $(DESTDIR)$(man1dir)
-	$(INSTALL_DATA) faidx.5 sam.5 vcf.5 $(DESTDIR)$(man5dir)
+	$(INSTALL_MAN) htsfile.1 tabix.1 $(DESTDIR)$(man1dir)
+	$(INSTALL_MAN) faidx.5 sam.5 vcf.5 $(DESTDIR)$(man5dir)
 
 installdirs:
 	$(INSTALL_DIR) $(DESTDIR)$(bindir) $(DESTDIR)$(includedir) $(DESTDIR)$(includedir)/htslib $(DESTDIR)$(libdir) $(DESTDIR)$(man1dir) $(DESTDIR)$(man5dir) $(DESTDIR)$(pkgconfigdir)
@@ -378,7 +384,7 @@ installdirs:
 # and libhts.so.NN (used by client executables at runtime).
 
 install-so: libhts.so installdirs
-	$(INSTALL_DATA) libhts.so $(DESTDIR)$(libdir)/libhts.so.$(PACKAGE_VERSION)
+	$(INSTALL_LIB) libhts.so $(DESTDIR)$(libdir)/libhts.so.$(PACKAGE_VERSION)
 	ln -sf libhts.so.$(PACKAGE_VERSION) $(DESTDIR)$(libdir)/libhts.so
 	ln -sf libhts.so.$(PACKAGE_VERSION) $(DESTDIR)$(libdir)/libhts.so.$(LIBHTS_SOVERSION)
 
@@ -445,7 +451,8 @@ force:
 
 .PHONY: all check clean distclean distdir force
 .PHONY: install install-pkgconfig installdirs lib-shared lib-static
-.PHONY: maintainer-clean mostlyclean plugins print-version tags test testclean
+.PHONY: maintainer-clean mostlyclean plugins print-config print-version
+.PHONY: tags test testclean
 .PHONY: clean-so install-so
 .PHONY: clean-cygdll install-cygdll
 .PHONY: clean-dylib install-dylib
